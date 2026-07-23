@@ -128,6 +128,11 @@ motifsPtoG <- list(
 
 
 ### Parameters
+pop_size = 10000
+G <- 12000
+mut_rate <- 0.01 
+mut_dist <- 0.05 
+
 replicates <- 1
 nr_motives <- 2
 length_df <- (G)*replicates*nr_motives
@@ -141,11 +146,6 @@ results <- data.frame(
   Gvar2   = numeric(length_df),
   Gcov = numeric(length_df)
   )
-
-pop_size = 10000
-G <- 10000
-mut_rate <- 0.01 
-mut_dist <- 0.05 
 
 
 pop <- list()
@@ -206,7 +206,7 @@ for (m in c(1,5)) { # for (m in 1:nr_motives) {
       fitness <- fitness[inds]
       
       # Mutation
-      mutations <- rbern(pop_size * 2, mut_factor * mut_rate)
+      mutations <- rbern(pop_size * 2, mut_rate)
       mut_indices <- which(as.logical(mutations)) - 1
       
       for (mut in mut_indices) {
@@ -344,7 +344,7 @@ steepest_ascent <- function(x0, y0, step_size = 0.01, n_steps = 2000) {
 ascent_path <- steepest_ascent(6.4, 1.12)
 
 
-pl_A <- ggplot(noise_df, aes(x = x, y = y, fill = z)) +
+p_A <- ggplot(noise_df, aes(x = x, y = y, fill = z)) +
   geom_raster() +
   
   geom_point(
@@ -362,19 +362,22 @@ pl_A <- ggplot(noise_df, aes(x = x, y = y, fill = z)) +
     inherit.aes = FALSE,
   )+
   
-  coord_equal() +
+  #coord_equal() +
   scale_fill_viridis_c() +
-  facet_wrap(~motif, labeller=labeller(motif = function(x) paste("motif", x)))+
+  facet_wrap(~motif, labeller=labeller(motif = function(x) paste("Motif", x)))+
   theme_minimal() +
-  annotate("point", x = c(9.14, 10.34), y = c(1.56, 2.77), shape = 4, size = 1, stroke = 1) +
+  annotate("point", x = c(9.14, 10.34), y = c(1.56, 2.77), shape = 4, size = 1, color = "red") +
   labs(
     title = "",
-    fill = "fitness",
-    x = expression(x[1]),
-    y = expression(x[2])
+    fill = "Fitness",
+    color="Time",
+    x = expression("Phenotype" ~ x[1]),
+    y = expression("Phenotype" ~ x[2])
     
     
   )
+
+p_A
 
 #ggsave("motif_div-trajectories.png", width = 7, height = 5, bg = "white")
 
@@ -436,10 +439,10 @@ calculate_M_ellipses_df <- function(data, Sigma, level = 0.3) {
   data %>%
     mutate(
       ellipse = pmap(
-        list(motif, x1, x2, mut_factor),
-        function(j, x, y, m) {
+        list(motif, x1, x2),
+        function(j, x, y) {
           J_fun <- J_matrix[[j]]
-          M <- J_fun(x, y, th = 5) %*% (m * Sigma) %*% t(J_fun(x, y, th = 5))
+          M <- J_fun(x, y, th = 5) %*% (Sigma) %*% t(J_fun(x, y, th = 5))
           
           if (any(is.na(M)) || any(eigen(M, symmetric = TRUE)$values <= 0)) {
             return(NULL)
@@ -454,7 +457,7 @@ calculate_M_ellipses_df <- function(data, Sigma, level = 0.3) {
 
 M_matrices <- calculate_M_ellipses_df(data_for_M, Sigma)
 
-pl_B <- ggplot(filter(results, motif == 1 | motif == 5, rep == 1), aes(mean_x1, mean_x2, group = rep)) +
+p_B <- ggplot(filter(results, motif == 1 | motif == 5, rep == 1), aes(mean_x1, mean_x2, group = rep)) +
   geom_path() +
   geom_path(
     data =filter(M_matrices, rep ==1, motif == 1 | motif == 5),
@@ -512,9 +515,10 @@ my_scale <- scale_color_discrete(
 
 p_C1 <- ggplot(matrix_data_renamed, aes(time, ecc, colour = matrix))+
   geom_line()+ my_scale+ 
-  facet_wrap(~motif, labeller = labeller(motif = function(x) paste("motif", x)))+ylab("eccentricity")+theme(axis.title.x = element_blank(),
+  facet_wrap(~motif, labeller = labeller(motif = function(x) paste("Motif", x)))+ylab("Eccentricity")+theme_minimal()+theme(axis.title.x = element_blank(),
                                                                                                             axis.text.x  = element_blank(),
                                                                                                             axis.ticks.x = element_blank())
+  
 
 matrix_results <- matrix_data  %>%
   rowwise() %>%
@@ -527,8 +531,8 @@ matrix_results <- matrix_data  %>%
                    ( (Gvar1 + Gvar2 + sqrt((Gvar1 - Gvar2)^2 + 4*Gcov^2))/2 )),
     
     # Major axis angle (radians)
-    M_angle = 0.5 * atan2(2*Mcov, Mvar1 - Mvar2),
-    G_angle = 0.5 * atan2(2*Gcov, Gvar1 - Gvar2),
+    M_angle = ((0.5 * atan2(2*Mcov, Mvar1 - Mvar2) * 180 / pi) + 180) %% 180,
+    G_angle = (0.5 * atan2(2*Gcov, Gvar1 - Gvar2) * 180 /pi) + 180 %% 180,
     
     # Angle difference (degrees)
     angle_diff = abs(M_angle - G_angle) * 180 / pi
@@ -539,10 +543,12 @@ matrix_results <- matrix_data  %>%
 p_C2 <- ggplot(matrix_results)+
   geom_line(aes(time, G_angle, colour="G-matrix"))+
   geom_line(aes(time, M_angle, colour="M-matrix"))+
-  facet_wrap(~motif)+labs(y = "angle", colour = "")+  scale_color_discrete(guide = "none")+
-  theme(axis.title.x = element_blank(),
+  facet_wrap(~motif)+labs(y = "Angle", colour = "")+  scale_color_discrete(guide = "none")+
+  scale_y_continuous(breaks = c(-50, 0, 50), labels = c("-50°", "0°", "50°"))+
+  theme_minimal()+theme(axis.title.x = element_blank(),
         axis.text.x  = element_blank(),
         axis.ticks.x = element_blank())+theme(strip.text = element_blank())
+  
 
 
 
@@ -560,10 +566,10 @@ matrix_results <- matrix_results %>%
   )
 
 p_C3 <- ggplot(matrix_results)+  
-  geom_line(aes(time, G_total_var, colour="G-matrix"))+
-  geom_line(aes(time, M_total_var, colour="M-matrix"))+
-  facet_wrap(~motif)+labs(y = "total variance", colour = "")+  scale_color_discrete(guide = "none")+
-  theme(strip.text = element_blank())
+  geom_line(aes(time, G_gen_var, colour="G-matrix"))+
+  geom_line(aes(time, M_gen_var, colour="M-matrix"))+
+  facet_wrap(~motif)+labs(x = "Time", y = "Determinant", colour = "")+  scale_color_discrete(guide = "none")+
+  theme_minimal()+theme(strip.text = element_blank())+xlim(c(0, 12000))
 
 
 
@@ -575,14 +581,139 @@ p_B <- p_B + labs(tag = "B")
 p_C1 <- p_C1 + labs(tag = "C")
 
 
-left_column <- p_A / p_B
+left_column <- p_A / p_B + plot_layout()
 right_column <- (p_C1 / p_C2 / p_C3) +
   plot_layout(guides = "collect") &
   theme(legend.position = "bottom")
 
-combined_patchwork <- left_column | right_column
+
+combined_patchwork <- (combined_plot | right_column) +
+  plot_layout(widths = c(1.5, 1))
+
 
 combined_patchwork
 
 ggsave("fig6_new.png", width = 8, height = 5)
 
+####################################
+
+library(grid)
+library(gtable)
+
+common_theme <- theme_minimal() +
+  theme(
+    strip.text = element_text(),
+    strip.background = element_blank(),
+    legend.position = "none",
+    panel.spacing.x = unit(3, "mm"),
+    plot.margin = margin(5.5, 5.5, 5.5, 5.5)
+  )
+
+# --- 4. Rebuild plots with identical structure --------------------------------
+
+p_A2 <- ggplot(noise_df, aes(x = x, y = y, fill = z)) +
+  geom_raster() +
+  geom_point(
+    data = filter(results, motif != 0, rep == 1, motif %in% c(1, 5)),
+    aes(x = mean_x1, y = mean_x2, colour = time),
+    size = 1,
+    inherit.aes = FALSE
+  ) +
+  # geom_path(
+  #   data = ascent_path,
+  #   aes(x = y, y = x),
+  #   color = "red",
+  #   linewidth = 1,
+  #   inherit.aes = FALSE
+  # ) +
+  annotate("point", x = c(9.14, 10.34), y = c(1.56, 2.77),
+           shape = 4, size = 1, stroke = 1, colour = "red") +
+  scale_fill_viridis_c() +
+  scale_x_continuous(limits = xlims, expand = c(0, 0)) +
+  scale_y_continuous(limits = ylims, expand = c(0, 0)) +
+  facet_wrap(~motif, labeller=labeller(motif = function(x) paste("Motif", x)), scales = "fixed") +
+  coord_equal() +
+  labs(x = expression("Phenotype" ~ x[1]), y = expression("Phenotype" ~ x[2])) +
+  common_theme + labs(tag = "A")
+
+
+
+p_B2 <- ggplot(
+  filter(results, motif %in% c(1, 5), rep == 1),
+  aes(mean_x1, mean_x2, group = rep)
+) +
+  geom_path() +
+  geom_path(
+    data = filter(M_matrices, rep == 1, motif %in% c(1, 5)),
+    aes(ex, ey, group = interaction(rep, time)),
+    colour = "#00BFC4",
+    alpha = 0.5,
+    inherit.aes = FALSE
+  ) +
+  geom_path(
+    data = filter(ellipse_df, rep == 1, motif %in% c(1, 5)),
+    aes(x, y, group = interaction(rep, time)),
+    colour = "#F8766D",
+    alpha = 0.5,
+    inherit.aes = FALSE
+  ) +
+  annotate("point", x = c(9.14, 10.34), y = c(1.56, 2.77),
+           shape = 4, size = 1, stroke = 1, colour = "red") +
+  scale_x_continuous(limits = xlims, expand = c(0, 0)) +
+  scale_y_continuous(limits = ylims, expand = c(0, 0)) +
+  facet_wrap(~motif, labeller = labeller(motif = function(x) ""),  scales = "fixed") +
+  coord_equal() +
+  labs(x = expression("Phenotype" ~ x[1]), y = expression("Phenotype" ~ x[2])) +
+  common_theme+ labs(tag = "B")
+
+# --- 5. Convert to grobs and FORCE alignment ----------------------------------
+
+g1 <- ggplotGrob(p_A2)
+g2 <- ggplotGrob(p_B2)
+
+# Force identical widths/heights (this is the key step)
+g1$widths  <- unit.pmax(g1$widths,  g2$widths)
+g2$widths  <- unit.pmax(g1$widths,  g2$widths)
+
+g1$heights <- unit.pmax(g1$heights, g2$heights)
+g2$heights <- unit.pmax(g1$heights, g2$heights)
+
+# # --- 6. Draw final aligned plot -----------------------------------------------
+# label_A <- textGrob("A", x = unit(-0.1, "npc"), y = unit(1.1, "npc"),
+#                     just = c("left", "top"),
+#                     gp = gpar(fontsize = 16, fontface = "bold"))
+# label_A <- grobTree(
+#   rectGrob(gp = gpar(fill = NA, col = NA)),
+#   textGrob("A", gp = gpar(fontsize = 16, fontface = "bold"))
+# )
+# label_B <- textGrob("B", x = unit(0, "npc"), y = unit(1, "npc"),
+#                     just = c("left", "top"),
+#                     gp = gpar(fontsize = 16, fontface = "bold"))
+# 
+# label_A <- grobTree(
+#   textGrob("A", gp = gpar(fontsize = 16, fontface = "bold")),
+#   cl = "off"
+# )
+# 
+# label_B <- grobTree(
+#   textGrob("B", gp = gpar(fontsize = 16, fontface = "bold")),
+#   cl = "off"
+# )
+# 
+# g1 <- gtable_add_grob(g1, label_A,
+#                       t = 1, l = 1,
+#                       z = Inf)
+# 
+# g2 <- gtable_add_grob(g2, label_B,
+#                       t = 1, l = 1,
+#                       z = Inf)
+# 
+# g1 <- gtable_add_grob(g1, label_A, t = 1, l = 1, z = Inf)
+# g2 <- gtable_add_grob(g2, label_B, t = 1, l = 1, z = Inf)
+# 
+
+
+grid.newpage()
+#combined <- grid.draw(rbind(g1, g2))
+combined <- rbind(g1, g2)
+combined_plot <- wrap_elements(full = combined)

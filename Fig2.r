@@ -138,7 +138,7 @@ ell_df <- ell_df %>%
   rename(motif = J_id)
 
 label_motif <- function(value) {
-  paste("motif", value)  
+  paste("Motif", value)  
 }
 
 sensitivity <- expand_grid(
@@ -157,7 +157,7 @@ sensitivity <- sensitivity %>%
     x1a2 = x1 +  J[1,2],
     x2a2 = x2 +  J[2,2]
   ) %>%
-  select(-J) %>%
+  dplyr::select(-J) %>%
   ungroup()
 
 
@@ -177,8 +177,65 @@ ggplot(ell_df, aes(ex, ey, group = interaction(motif, x, y))) +
   ), arrow = arrow(length = unit(0.07, "cm"), type = "closed"), colour="red", linewidth = 0.4,   inherit.aes = FALSE)+
   coord_equal() +
   theme_minimal()+
-  facet_wrap(~motif, labeller = labeller(motif = label_motif))+xlab(expression(x[1]))+ylab(expression(x[2]))+
+  facet_wrap(~motif, labeller = labeller(motif = label_motif))+xlab(expression("Phenotype" ~ x[1]))+ylab(expression("Phenotype" ~ x[2]))+
   theme(strip.text = element_text(face = "bold"))+
   theme(panel.spacing.x = unit(3, "lines"))  
 
 ggsave("hohenlohe_M-matrix.png", width = 7, height =4, bg = "white")
+
+
+p1 <- ggplot(filter(ell_df, motif < 3), aes(ex, ey, group = interaction(motif, x, y))) +
+  geom_path() +
+  geom_segment(data = filter(sensitivity, motif < 3), aes(
+    x=x1,
+    y=x2,
+    xend=x1a1,
+    yend = x2a1
+  ), arrow = arrow(length = unit(0.07, "cm"), type = "closed"), colour="blue", linewidth = 0.4,   inherit.aes = FALSE)+
+  geom_segment(data = filter(sensitivity, motif < 3), aes(
+    x=x1,
+    y=x2,
+    xend=x1a2,
+    yend = x2a2
+  ), arrow = arrow(length = unit(0.07, "cm"), type = "closed"), colour="red", linewidth = 0.4,   inherit.aes = FALSE)+
+  coord_equal() +
+  theme_minimal()+
+  facet_wrap(~motif, labeller = labeller(motif = label_motif))+xlab(expression("Phenotype" ~ x[1]))+ylab(expression("Phenotype" ~ x[2]))+
+  theme(strip.text = element_text(face = "bold"))+
+  theme(panel.spacing.x = unit(3, "lines"))  
+
+my_plot <- readRDS("C:/Users/user/Downloads/my_plot.rds")
+
+ggarrange(p1, my_plot)
+
+
+ggsave("hohenlohe_M-matrix.png", width = 7, height =4, bg = "white")
+
+
+
+
+ggplot(ell_df, aes(ex, ey, group = interaction(motif, x, y))) +
+  geom_path() +
+  geom_segment(data = sensitivity, aes(
+    x=x1,
+    y=x2,
+    xend=x1a1,
+    yend = x2a1
+  ), arrow = arrow(length = unit(0.07, "cm"), type = "closed"), colour="blue", linewidth = 0.4,   inherit.aes = FALSE)+
+  geom_segment(data = sensitivity, aes(
+    x=x1,
+    y=x2,
+    xend=x1a2,
+    yend = x2a2
+  ), arrow = arrow(length = unit(0.07, "cm"), type = "closed"), colour="red", linewidth = 0.4,   inherit.aes = FALSE)+
+  coord_equal() +
+  theme_minimal()+
+  facet_wrap(~motif, labeller = labeller(motif = label_motif))+xlab(expression(x[1]))+ylab(expression(x[2]))+
+  theme(strip.text = element_blank(), panel.spacing.y = unit(2, "cm") )+
+  theme(panel.spacing.x = unit(3, "lines"))  
+
+ggsave("hohenlohe_M-matrix2.png", width = 7, height =5, bg = "white")
+
+
+
+

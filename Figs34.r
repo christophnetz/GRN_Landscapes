@@ -379,7 +379,7 @@ processed_results2$n <- processed_results2$n / 10
 
 
 ### SVM border inference
-data <- select(final_results2, motif, rep, x1, x2, peak_reached2)
+data <- dplyr::select(final_results2, motif, rep, x1, x2, peak_reached2)
 
 
 library(e1071)
