@@ -1,0 +1,4 @@
+output/
+figures/
+*.Rhistory
+.DS_Store
