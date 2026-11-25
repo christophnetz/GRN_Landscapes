@@ -20,7 +20,7 @@ install.packages(c("ambient", "tidyverse", "patchwork", "e1071",
 | `fig1_linear_maps.R` | `figures/fig1.png` | Linear GP maps ($\mathbf{B}_1, \mathbf{B}_2, \mathbf{B}_3$) on single- and two-peak landscapes |
 | `fig2_m_matrices.R` | `figures/fig2.png` | Six GRN motifs, diploid $\mathbf{M}$-matrix tensor fields, and sensitivity vectors |
 | `fig3_basins.R` | `figures/fig3.png`, `figS1.png`, `figS2.png` | Basins of attraction on simple (freq. 0.1) and complex (freq. 0.5) Perlin landscapes, SVM borders and Lande separatrices |
-| `fig4_fig5_complexity.R` | `figures/fig4.png`, `figures/fig5.png` | Outcome mismatch and $M_{\max}$ alignment across Perlin frequencies (0.3, 0.6, 1.2, 1.8) at $\sigma = 0.2$ (and `SIGMA=0.05` check) |
+| `fig4_fig5_complexity.R` | `figures/fig4.png`, `figures/fig5.png`, `figures/fig5_e_d_sigma0.2.png` | Outcome mismatch and $M_{\max}$ alignment across Perlin frequencies (0.3, 0.6, 1.2, 1.8) at $\sigma = 0.2$ (and `SIGMA=0.05` check); alternative alignment measure $e_d = (\mathbf{d}^\top \mathbf{M} \mathbf{d} / \mathbf{d}^\top \mathbf{d}) / (\mathrm{tr}\,\mathbf{M}/2)$, the relative mutational variance along the divergence vector, with $\mathbf{M}$ at the end or starting point |
 | `fig6_trajectories.R` | `figures/fig6.png` | Replicated trajectories of Motifs 1 and 5 ($N = 10{,}000$) tracking parent-offspring $\mathbf{G}$ and local $\mathbf{M}$ |
 | `fig6_search.R` | `output/fig6_search_candidates.csv` | Screen for robust Motif 1 vs. 5 divergence from similar initial $\mathbf{M}$-matrices |
 | `motif_example.R` | `figures/motif_example.png` | Single-start divergence across all six motifs on a rugged Perlin landscape |

@@ -187,4 +187,64 @@ ggsave(file.path(FIG_DIR, paste0("fig5_", tag, ".png")), p5,
 if (SIGMA == 0.2) {
   ggsave(file.path(FIG_DIR, "fig5.png"), p5, width = 9.5, height = 5.5, dpi = 300, bg = "white")
 }
+
+# ---- Fig 5 alternative: relative mutational variance along divergence -------
+# Alternative to the M_max angle (from the original boxplotsfig5.r):
+#   e_d = (d' M d / d' d) / (tr(M) / 2),
+# the mutational variance in the direction of divergence d (start -> peak
+# reached) relative to the mean mutational variance over all directions.
+# e_d > 1: evolution proceeded along a direction of above-average mutational
+# variance; e_d < 1: below average. Isotropic M (motif 6) gives exactly 1, and
+# e_d is in [lambda_min, lambda_max] / mean(lambda), so it weights alignment by
+# the eccentricity of M. Computed with M at the end point (peak reached) and
+# at the starting point.
+m_entries <- function(k, x1, x2) {
+  M <- tryCatch(
+    m_matrix(paper_motif(k), phenotype = c(x1, x2), mu = PAPER$mu,
+             sigma = SIGMA, ploidy = PAPER$ploidy),
+    error = function(e) matrix(NA_real_, 2, 2)
+  )
+  c(M[1, 1], M[1, 2], M[2, 2])
+}
+add_M <- function(d, x1, x2, prefix) {
+  E <- t(mapply(m_entries, d$motif, d[[x1]], d[[x2]]))
+  d[[paste0(prefix, "11")]] <- E[, 1]
+  d[[paste0(prefix, "12")]] <- E[, 2]
+  d[[paste0(prefix, "22")]] <- E[, 3]
+  d
+}
+rel_var <- function(dx, dy, m11, m12, m22) {
+  (dx^2 * m11 + 2 * dx * dy * m12 + dy^2 * m22) / (dx^2 + dy^2) /
+    ((m11 + m22) / 2)
+}
+M_end <- add_M(distinct(align, motif, peak_x1, peak_x2), "peak_x1", "peak_x2", "Me")
+M_start <- add_M(distinct(align, motif, start_x1, start_x2), "start_x1", "start_x2", "Ms")
+e_d <- align %>%
+  left_join(M_end, by = c("motif", "peak_x1", "peak_x2")) %>%
+  left_join(M_start, by = c("motif", "start_x1", "start_x2")) %>%
+  transmute(frequency, landscape, motif, start_x1, start_x2, peak_x1, peak_x2,
+            `M at end point` = rel_var(dx, dy, Me11, Me12, Me22),
+            `M at starting point` = rel_var(dx, dy, Ms11, Ms12, Ms22)) %>%
+  pivot_longer(c(`M at end point`, `M at starting point`),
+               names_to = "M_at", values_to = "e_d") %>%
+  filter(is.finite(e_d))
+
+summary_e_d <- e_d %>%
+  group_by(M_at, frequency, motif) %>%
+  summarise(median_e_d = median(e_d), iqr_e_d = IQR(e_d),
+            frac_above_1 = mean(e_d > 1 + 1e-8), n = n(), .groups = "drop")
+print(summary_e_d, n = 60)
+write_csv(summary_e_d, file.path(OUT_DIR, paste0("fig5_e_d_summary_", tag, ".csv")))
+
+p5_ed <- ggplot(e_d, aes(factor(frequency), e_d, fill = factor(motif))) +
+  geom_hline(yintercept = 1, linetype = 2, colour = "red", linewidth = 0.6) +
+  geom_boxplot(outlier.size = 0.4, outlier.alpha = 0.25, linewidth = 0.35,
+               position = position_dodge(width = 0.8)) +
+  facet_wrap(~M_at, ncol = 1) +
+  scale_fill_manual(values = motif_cols, name = "Motif") +
+  labs(x = "Landscape complexity",
+       y = "Relative mutational variance\nin the direction of divergence")
+
+ggsave(file.path(FIG_DIR, paste0("fig5_e_d_", tag, ".png")), p5_ed,
+       width = 9.5, height = 8, dpi = 300, bg = "white")
 message("Saved Fig 4 and Fig 5 for ", tag)
